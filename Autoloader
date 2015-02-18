@@ -1,0 +1,31 @@
+<?php
+class Autoloader {
+    private static $lastLoadedFilename;
+   	// классы Lib
+    private static $pattern = array('MySQL', 'SQLite', 'TemplateParser');
+ 	
+    /**
+     * Метод loadPackages загружает скрипт из файловой системы
+     * @param 		string $className
+     * @return 		void
+	 * @author 		Игорь Быра <ihorbyra@gmail.com>
+	 * @version 	1.0
+     */
+    public static function loadPackages($className) {
+        if (preg_match('/Model/', $className)) {
+        	$className = preg_replace('/Model/', '', $className);
+        	self::$lastLoadedFilename = BASEDIR . "/mod/{$className}/model/{$className}.php";         	
+        }
+    	elseif (in_array($className, self::$pattern)) {
+        	self::$lastLoadedFilename = BASEDIR . "/lib/{$className}.php";         	
+        }
+        else {
+        	self::$lastLoadedFilename = BASEDIR . "/mod/{$className}/{$className}.php"; 
+        }
+        
+        if (is_readable(self::$lastLoadedFilename))
+        	require_once(self::$lastLoadedFilename);
+    }
+
+}
+?>
