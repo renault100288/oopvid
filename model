@@ -1,0 +1,201 @@
+<?php
+class LiveVideoModel extends LiveVideo{
+	
+	private function videoTypes($type) {
+		switch ($type) {
+			case 'sb':
+			$ptype = 'ШБ';
+			break;	
+			case 'vsu':
+			$ptype = 'ВШУ';
+			break;
+		};
+		return $ptype;
+	}
+	
+	public function printAllVideo() {
+		$video = $this->getAllVideo();
+		if ($video !== false) {
+			$content = '<table class="table table-hover">
+							<tr class="info">
+								<th>ID</th>
+								<th>Название</th>
+								<th>Тип</th>
+								<th>Пароль</th>
+								<th>Youtube cсылка</th>		
+								<td>&nbsp;</td>	
+								<td>&nbsp;</td>		
+								<td>&nbsp;</td>						
+							</tr>';
+			foreach ($video as $row => $data) {
+				$active = (($data['active'] == 1) ? 'success' : 'danger');
+				$playMusic = (($data['playMusic'] == '1') ? 'glyphicon-volume-down' : 'glyphicon-volume-off');
+				$playMusicBtn = (($data['playMusic'] == '1') ? 'success' : 'danger');
+				$content .= '<tr class="'.$active.'" id="video_'.$data['id'].'">
+								<td>'.$data['id'].'</td>
+								<td>'.$data['name'].'</td>
+								<td>'.$this->videoTypes($data['type']).'</td>
+								<td>'.$data['password'].'</td>
+								<td>'.$data['videoUrl'].'</td>	
+								<td>
+									<button id="playMusicBtn_'.$data['id'].'" onClick="setMusicFlag('.$data['id'].', '.$data['playMusic'].')" type="button" class="btn btn-'.$playMusicBtn.' btn-sm">
+									  <span class="glyphicon '.$playMusic.'"></span>
+									</button>
+								</td>
+								<td>
+									<button onClick="locate(\'/admin/liveVideo/newForm/'.$data['id'].'/\')" type="button" class="btn btn-primary btn-sm">
+									  <span class="glyphicon glyphicon-pencil"></span>
+									</button>
+								</td>
+								<td>
+									<button onClick="deleteVideo('.$data['id'].')" type="button" class="btn btn-danger btn-sm">
+									  <span class="glyphicon glyphicon-remove"></span>
+									</button>
+								</td>	
+														
+							</tr>';
+			}
+			$content .= '</table>';	
+			return $content;
+		}
+		
+		return 'Нет данных для видео трансляций';
+	}
+	
+	public function printAllAudio() {
+		$audio = $this->getAllAudio();
+		if ($audio !== false) {
+			$content = '<table class="table table-hover">
+							<tr class="info">
+								<th>Исполнитель</th>
+								<th>Песня</th>
+								<th>Файл (mp3/ogg)</th>
+								<td>&nbsp;</td>							
+							</tr>';
+			foreach ($audio as $row => $data) {
+
+				$content .= '<tr id="audio_'.$data['id'].'">
+								<td>'.$data['singer'].'</td>
+								<td>'.$data['song'].'</td>
+								<td>'.$data['file'].'</td>	
+								<td>
+									<button onClick="deleteAudio('.$data['id'].')" type="button" class="btn btn-danger btn-sm">
+									  <span class="glyphicon glyphicon-remove"></span>
+									</button>
+								</td>							
+							</tr>';
+			}
+			$content .= '</table>';	
+			return $content;
+		}
+		
+		return 'Нет аудио файлов';
+	}
+	
+	public function printAudioList($audio, $videoId=null, $type='span') {
+		if ($audio !== false) {
+			
+			$cAudio = count($audio);
+			$i = 0;
+			foreach ($audio as $row => $data) {
+				if ($type == 'span') {
+				$content .= '<span id="songLabel_'.$data['id'].'" class="label label-primary btn-xs">'.$data['singer'].' '.$data['song'].' 
+								<button onClick="deleteAudioFromList('.$data['id'].', '.$videoId.', 1)" type="button" class="btn btn-danger btn-xs">
+								  <span class="glyphicon glyphicon-remove"></span>
+								</button></span> ';
+				}
+				else {
+					$content .= $data['id'];
+					if ($cAudio > ($row+1)) $content .= ', ';
+				}
+				$i++;
+			}
+
+			
+			return $content;
+		}
+		
+		return 'Нет аудио файлов';
+	}
+	
+	public function printVideoTypes($type=null) {
+		$types = array(
+					array('type' => 'sb', 'name' => '[ШБ] Школа Бизнеса'),
+					array('type' => 'vsu', 'name' => '[ВШУ] Высшая Школа Управления')
+				 );
+				 
+		$disabled = (($type == null) ? '' : ' disabled');	
+		$content = '<select'.$disabled.' class="form-control" name="type" id="type">
+					<option value="0">Выберите тип конференции</option>';
+		
+		foreach ($types as $row => $data){
+			$selected = (($type == $data['type']) ? ' selected="selected"' : '');
+			$content .= '<option'.$selected.' value="'.$data['type'].'">'.$data['name'].'</option>';
+		}
+		
+		$content .= '</select>';
+		
+		return $content;
+	}
+	
+	public function printVideoStat() {
+		$stat = $this->getVideoStat();
+		if ($stat !== false) {
+			$content = '<table class="table table-hover">
+							<tr class="info">
+								<th>ID</th>
+								<th>Видео урок</th>
+								<th>Количество посетивших</th>		
+			
+							</tr>';
+			foreach ($stat as $row => $data) {
+
+				$content .= '<tr>
+								<td>'.$data['videoId'].'</td>
+								<td>'.$data['name'].'</td>
+								<td>'.$data['count'].'</td>		
+					
+							</tr>';
+			}
+			$content .= '</table>';	
+			return $content;
+		}
+		
+		return 'Нет данных для статистики';
+	}
+	
+	public function passwordForm($wrong='') {
+		$content = '
+					<form id="form" name="form" action="?action=login" method="post">
+						<div>
+						<h3>Для участия в Видео-конференции введите пожалуйста пароль</h3>
+						'.$wrong.'
+							<label id="pass" for="password">*</label>
+							<input type="password" name="password" id="password" placeholder="Введите пароль для просмотра видео" required />
+							<input type="submit" id="submit" name="submit" value="Ввойти"/>
+						</div>
+					</form><br><br>';
+		return $content;
+	}
+	
+	public function login($password, $data){
+		if($password) {						
+			if($data['password'] == $password) {
+
+				$_SESSION['password'] = 'y';					
+				$content .= '<script language="javascript">document.location = "/";</script>';
+			}
+			else {
+				$_SESSION['password'] = 'n';
+				$content = $this->passwordForm('<div style="color:red">Вы ввели неправильный пароль</div><br>');
+			}	
+		}
+		else {
+			$_SESSION['password'] = 'n';
+			$content = $this->passwordForm('<div style="color:red">Вы ввели неправильный пароль</div><br>');
+		}
+		return $content;
+	}
+	
+}
+?>
