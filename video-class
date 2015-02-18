@@ -1,0 +1,213 @@
+<?php
+class LiveVideo extends SQLite {
+	
+	public function getAllVideo() {
+		$data = array();
+		$query = "SELECT * FROM `video` WHERE `deleted`= '0' ORDER BY `id` DESC";
+		$results = $this->execute($query);
+		while ($row = $results->fetchArray()) {
+		    $data[] = array('name' => $row['name'],
+		    				'id' => $row['id'],
+		    				'type' => $row['type'],
+		    				'videoUrl' => $row['videoUrl'],
+		    				'password' => $row['password'],
+		    				'active' => $row['active'],
+		    				'playMusic' => $row['playMusic']);
+		}
+		if (count($data) <= 0) return false;
+		
+		return $data;
+	}
+	
+	public function getVideoRecord($id) {
+		$query = "SELECT * FROM `video` WHERE `id` = '{$id}'";
+		$results = $this->execute($query);
+		$row = $results->fetchArray();
+	    $data = array('name' => $row['name'],
+	    				'id' => $row['id'],
+	    				'type' => $row['type'],
+	    				'videoUrl' => $row['videoUrl'],
+	    				'password' => $row['password'],
+	    				'active' => $row['active']);
+
+		if (count($data) <= 0) return false;
+		
+		return $data;
+	}
+	
+	public function generatePassword($number = 10)  {  
+	    $arr = array('a','b','c','d','e','f',  
+	                 'g','h','i','j','k','l',  
+	                 'm','n','o','p','r','s',  
+	                 't','u','v','x','y','z',  
+	                 'A','B','C','D','E','F',  
+	                 'G','H','I','J','K','L',  
+	                 'M','N','O','P','R','S',  
+	                 'T','U','V','X','Y','Z',  
+	                 '1','2','3','4','5','6',  
+	                 '7','8','9','0');   
+	    $pass = "";  
+	    for($i = 0; $i < $number; $i++) {  
+	      $index = rand(0, count($arr) - 1);  
+	      $pass .= $arr[$index];  
+	    }  
+	    return $pass;  
+	} 
+  
+	public function addVideo($data) {
+		$query = "INSERT INTO `video` (`id`, `name`, `videoUrl`, `password`, `type`) 
+				VALUES (NULL, '{$data['name']}', '{$data['videoUrl']}', '{$data['password']}', '{$data['type']}')";
+		$exec = $this->execute($query);
+		if ($exec) return $this->lastInsertRowID();
+			return false;
+	}
+	
+	public function editVideo($data) {
+		$query = "UPDATE `video` 
+					SET `name`='{$data['name']}', `videoUrl`='{$data['videoUrl']}', `password`='{$data['password']}'
+					WHERE `id` = '{$data['id']}'";
+		$exec = $this->execute($query);
+		if ($exec) return $data['id'];
+			return false;
+	}
+  
+	public function deleteVideo($id) {
+		$query = "UPDATE `video` SET `deleted` = '1' WHERE `id` = '{$id}'";
+		$result = $this->execute($query);
+	}
+	
+	public function setActive($type) {
+		$query = "UPDATE `video` SET `active` = '0' WHERE `type` = '{$type}'";
+		$this->execute($query);
+	}
+	
+	public function getVideoInfo($type) {
+		$query = "SELECT * FROM `video` WHERE `deleted`= '0' AND `type` = '{$type}' AND `active` = '1'";
+		$results = $this->execute($query);
+		$row = $results->fetchArray();
+	    $data = array('name' => $row['name'],
+	    				'id' => $row['id'],
+	    				'type' => $row['type'],
+	    				'videoUrl' => $row['videoUrl'],
+	    				'password' => $row['password'],
+	    				'active' => $row['active']);
+		
+		if (count($data) <= 0) return false;
+		
+		return $data;
+	}
+	
+	public function getVideoType($id) {
+		$query = "SELECT `type` FROM `video` WHERE `id` = '{$id}'";
+		$results = $this->execute($query);
+		$row = $results->fetchArray();
+		if (count($row) < 1) return false;
+		return $row['type'];
+	}
+	
+	public function getAllAudio($ajax = false) {
+		$data = array();
+		$query = "SELECT * FROM `audio` ORDER BY `singer` ASC";
+		$results = $this->execute($query);
+		while ($row = $results->fetchArray()) {
+		    $data[] = array('id' => $row['id'],
+		    				'file' => $row['file'],
+		    				'singer' => $row['singer'],
+		    				'song' => $row['song']);
+		}
+		if (count($data) <= 0) return false;
+		
+		if ($ajax == true)
+			return json_encode($data);
+		return $data;
+	}
+	
+	public function getAudio($id, $ajax = false) {
+		$query = "SELECT * FROM `audio` WHERE `id` = '{$id}'";
+		$results = $this->execute($query);
+		$row = $results->fetchArray();
+	    $data = array('id' => $row['id'],
+	    				'file' => $row['file'],
+	    				'singer' => $row['singer'],
+	    				'song' => $row['song']);
+		
+		if (count($data) <= 0) return false;		
+		if ($ajax == true)
+			return json_encode($data);
+		return $data;
+	}
+	
+	public function addAudioInList($data, $videoId) {
+		$audio = $data['audioInList'];
+		$cAudio = count($audio);
+		for ($i = 0; $i < $cAudio; $i++) {
+			$audio[$i] = trim($audio[$i]);
+			$query = "INSERT INTO `xref_video_audio` (`id`, `videoId`, `audioId`) 
+						VALUES (NULL, '{$videoId}', '{$audio[$i]}')";
+			$exec = $this->execute($query);
+		}
+		
+		if ($exec) return true;
+			return false;
+	}
+	
+	public function getAudioList($videoId) {
+		$data = array();
+		$query = "SELECT * FROM `xref_video_audio`
+					INNER JOIN `audio` ON  `xref_video_audio`.`audioId` =  `audio`.`id`
+					WHERE `xref_video_audio`.`videoId` = '{$videoId}'";
+		
+		$results = $this->execute($query);
+		
+		while ($row = $results->fetchArray()) {
+		    $data[] = array('id' => $row['audioId'],
+		    				'file' => $row['file'],
+		    				'singer' => $row['singer'],
+		    				'song' => $row['song']);
+		}
+
+		if (count($data) <= 0) return false;
+		
+		return $data;
+	}
+	
+	public function deleteAudioFromList($id, $videoId) {
+		$query = "DELETE FROM `xref_video_audio` WHERE `audioId` = '{$id}' AND `videoId` = '{$videoId}'";
+		$results = $this->execute($query);
+	}
+	
+	public function deleteAllAudioFromList($videoId) {
+		$query = "DELETE FROM `xref_video_audio` WHERE `videoId` = '{$videoId}'";
+		$results = $this->execute($query);
+	}
+	
+	public function setMusicFlag($videoId, $musicAction) {
+		$query = "UPDATE `video` SET `playMusic` = '{$musicAction}' WHERE `id` = '{$videoId}'";
+		$results = $this->execute($query);
+	}
+	
+	public function addVideoStat($data) {
+		$date = date('Y-m-d');
+		$query = "INSERT INTO `video_stat` (`id`, `date`, `videoId`, `studentEmail`) 
+					VALUES (NULL, '{$date}','{$data['videoId']}','{$data['email']}')";
+		$results = $this->execute($query);
+	}
+	
+	public function getVideoStat() {
+		$query = "SELECT *, COUNT(`video_stat`.`videoId`) AS `rowsCount` FROM `video_stat`
+					INNER JOIN `video` ON `video_stat`.`videoId` = `video`.`id`
+					GROUP BY `video_stat`.`videoId`";
+		$results = $this->execute($query);
+		while ($row = $results->fetchArray()) {
+		    $data[] = array('name' => $row['name'],
+		    				'videoId' => $row['videoId'],
+		    				'count' => $row['rowsCount']);
+		}
+		if (count($data) <= 0) return false;
+		
+		return $data;
+		
+	}
+	
+}
+?>
